@@ -19,7 +19,12 @@ class AuthController extends Controller
      * @return void
      */
     public function __construct() {
-        $this->middleware('auth:api', ['except' => ['login', 'register', 'accountCheck']]);
+        $this->middleware('auth:api', ['except' => ['login', 'register', 'accountCheck','registerAdmin','loginAdmin','showAllAdmin']]);
+    }
+
+    public function showAllAdmin(){
+        //$showalladmin = User::where('account_permit', '!=', "0")->get();
+        return User::where('account_permit', '!=', "0")->get();
     }
     /**
      * Get a JWT via given credentials.
@@ -34,8 +39,6 @@ class AuthController extends Controller
     public function login(Request $request){
         $validator = Validator::make($request->all(), [
             'account' =>'required|string|min:6',
-
-            //'email' => 'required|email',
             'password' => 'required|string|min:6',
         ]);
         if ($validator->fails()) {
@@ -44,7 +47,32 @@ class AuthController extends Controller
         if (! $token = auth()->attempt($validator->validated())) {
             return response()->json(['error' => 'Unauthorized'], 401);
             }
-        return $this->createNewToken($token);
+        if( (auth()->user()->account_permit) == "0"){
+            return $this->createNewToken($token);
+        }else{
+            return response()->json(['error' => '權限錯誤'],401);
+        }
+    }
+
+    public function loginAdmin(Request $request){
+        $validator = Validator::make($request->all(), [
+            'account' =>'required|string',
+            'password' => 'required|string',
+        ]);
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+            }
+        if (! $token = auth()->attempt(array_merge(
+                $validator->validated(),
+            ))){
+            return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+        if( (auth()->user()->account_permit) != "0"){
+            return $this->createNewToken($token);
+        }else{
+            return response()->json(['error' => '權限錯誤'],401);
+        }
     }
     /**
      * Register a User.
@@ -56,20 +84,48 @@ class AuthController extends Controller
             'account' => 'required|string|min:6|unique:users',
             'name' => 'required|string|between:2,100',
             'password' => 'required|string|confirmed|min:6',
-            'email' => 'required|string|email|max:100|unique:users,email',
+            'email' => 'required|string|email|max:100|unique:users',
             'address' => 'required|string',
-            'telephone' => 'required|string' ,
+            'telephone' => 'required|string',
+        ]);
+        if($validator->fails()){
+            return response()->json($validator->errors()->toJson(), 400);
+        }
+
+        $user = User::create(array_merge(
+            $validator->validated(),
+            ['password' => bcrypt($request->password)],
+            ['account_permit' => "0" ],
+        ));
+        return response()->json([
+            'message' => 'User successfully registered',
+            'user' => $user
+        ], 201);
+    }
+
+    /**
+     * Register a Admin.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function registerAdmin(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'account' => 'required|string|unique:users',
+            'password' => 'required',
         ]);
         if($validator->fails()){
             return response()->json($validator->errors()->toJson(), 400);
         }
         $user = User::create(array_merge(
             $validator->validated(),
-            ['password' => bcrypt($request->password)]
+            ['password' => bcrypt($request->password)],
+            //暫時設定權限為0，之後要改
+            ['account_permit' => "1" ],
         ));
+
         return response()->json([
             'message' => 'User successfully registered',
-            'user' => $user
+            'user' => $user,
         ], 201);
     }
     /**
