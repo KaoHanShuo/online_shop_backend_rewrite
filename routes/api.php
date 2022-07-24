@@ -22,6 +22,16 @@ Route::get('/',function(){
     return "api測試成功";
 });
 
+Route::group([
+    'middleware' => 'api',
+    'prefix' => 'admin'
+], function ($router) {
+    Route::post('/login', [App\Http\Controllers\AdminController::class, 'login']);
+    Route::post('/register', [App\Http\Controllers\AdminController::class, 'register']);
+    Route::post('/logout', [App\Http\Controllers\AdminController::class, 'logout']);
+    Route::post('/refresh', [App\Http\Controllers\AdminController::class, 'refresh']);
+    Route::get('/user-profile', [App\Http\Controllers\AdminController::class, 'userProfile']);
+});
 
 Route::group([
     'middleware' => 'api',

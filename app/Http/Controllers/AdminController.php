@@ -5,13 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
+use App\Models\Admin;
 use Illuminate\Support\Facades\Validator;
-//use Validator;
-
 use Illuminate\Validation\Rule;
 
-class AuthController extends Controller
+class AdminController extends Controller
 {
     /**
      * Create a new AuthController instance.
@@ -19,24 +17,19 @@ class AuthController extends Controller
      * @return void
      */
     public function __construct() {
-        $this->middleware('auth:api', ['except' => ['login', 'register', 'accountCheck']]);
+        $this->middleware('auth:api', ['except' => ['login', 'register']]);
     }
+
+
     /**
      * Get a JWT via given credentials.
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function accountCheck(Request $request){
-        return User::where('account', '=', $request->all())->count();
-        // if(User::find() ($request->all()) )
-    }
-
     public function login(Request $request){
         $validator = Validator::make($request->all(), [
-            'account' =>'required|string|min:6',
-
-            //'email' => 'required|email',
-            'password' => 'required|string|min:6',
+            'account' =>'required',
+            'password' => 'required',
         ]);
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
@@ -46,6 +39,7 @@ class AuthController extends Controller
             }
         return $this->createNewToken($token);
     }
+
     /**
      * Register a User.
      *
@@ -53,17 +47,13 @@ class AuthController extends Controller
      */
     public function register(Request $request) {
         $validator = Validator::make($request->all(), [
-            'account' => 'required|string|min:6|unique:users',
-            'name' => 'required|string|between:2,100',
-            'password' => 'required|string|confirmed|min:6',
-            'email' => 'required|string|email|max:100|unique:users,email',
-            'address' => 'required|string',
-            'telephone' => 'required|string' ,
+            'account' => 'required|string|unique:users',
+            'password' => 'required|string',
         ]);
         if($validator->fails()){
             return response()->json($validator->errors()->toJson(), 400);
         }
-        $user = User::create(array_merge(
+        $user = Admin::create(array_merge(
             $validator->validated(),
             ['password' => bcrypt($request->password)]
         ));
@@ -72,6 +62,7 @@ class AuthController extends Controller
             'user' => $user
         ], 201);
     }
+
     /**
      * Log the user out (Invalidate the token).
      *
